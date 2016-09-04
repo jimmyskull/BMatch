@@ -19,7 +19,7 @@ EXE = $(BIN)/bmatch
 MEXEXE = $(BIN)/bmatch_ijw_mex.$(MEXEXTENSION)
 
 # if using precompiled library 2.8b18
-LIBDIRGOBLIN=goblin.2.8b18/lib/$(SYSTEM) # GOBLIN include flags
+LIBDIRGOBLIN=goblin.2.8b18/$(SYSTEM) # GOBLIN include flags
 INCLDIRGOBLIN=goblin.2.8b18/include # GOBLIN linker flags
 
 LFLAGS=		-L$(LIBDIRGOBLIN) # linker flags

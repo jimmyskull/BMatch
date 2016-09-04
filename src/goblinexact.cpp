@@ -1,11 +1,10 @@
 /*
  * B-matching toolbox
- * Stu Andrews
+ * Stu Andrews (sja2106@columbia.edu)
  * January 2008
  * */
 #include <iostream>
 #include <cmath>
-#include <climits>
 using namespace std;
 #include "goblinexact.hpp"
 
@@ -208,33 +207,6 @@ solution(const int & num_bmatch_edge, DoubleVec & bmatch_edge_vec)
 }
 /* end of solution */
 
-
-/* scale_weight3 
- * Edit by blake 
- * This function now scales the weights so that their sum is specified by max1.
- * The min is not shifted.
- * */
-void GoblinExactBmatch::
-scale_weight3(const int & num_ijw, DoubleVec & ijw_vec, const double & max1)
-{
-    register int k;
-    register double  sum0;
-
-    /* compute sum */
-    sum0 = 0.0;
-    for (k=0; k<num_ijw; k++) 
-    {
-        sum0 = sum0 + ijw_vec[3*k+2];
-    }
-
-    for (k=0; k<num_ijw; k++) 
-    {
-        ijw_vec[3*k+2] = (ijw_vec[3*k+2] / sum0) * max1;
-    }
-}
-/* end scale_weight3 */
-
-
 /* scale_weight2 */
 void GoblinExactBmatch::
 scale_weight2(const int & num_ijw, DoubleVec & ijw_vec, const double & ff)
@@ -279,16 +251,7 @@ scale_weight(const int & num_ijw, DoubleVec & ijw_vec, const double & min1, cons
 
 
 
-/* solve_bmatching_problem 
- *
- *  MIN COST formulation
- *
- * - removes edges that are incident to nodes with upper bound at zero
- * - ensures validity of degree bounds, first checking
- *   1)  0 <= LB <= ith_degree(graph), and then
- *   2) LB <= UB <= ith_degree(graph)
- *   (i.e. if LB>UB, then UB is set to LB, which is different from maxwgt)
- * */
+/* solve_bmatching_problem */
 int GoblinExactBmatch::
 solve_bmatching_problem(const int & in_num_node, const DoubleVec & in_deg_bdd_vec, const int & in_num_ijw, const DoubleVec & in_ijw_vec, int & num_bmatch_edge, DoubleVec & bmatch_edge_vec, double & bmatch_wgt, const int & verbose)
 {
@@ -302,78 +265,22 @@ solve_bmatching_problem(const int & in_num_node, const DoubleVec & in_deg_bdd_ve
     int L_num_ijw = in_num_ijw;
     DoubleVec L_ijw_vec = in_ijw_vec;
     DoubleVec L_deg_bdd_vec = in_deg_bdd_vec;
-    DoubleVec L_in_deg_bdd_vec = in_deg_bdd_vec;
 
-    /* degrees */
-    DoubleVec deg_vec(L_num_node, 0);     /* of input graph */
-
-    /* adjacency and weights */
-    SparseVecVec AAmat;
     SparseVecVec WWmat;
-    SparseVecIterator sp;
 
-    /* remove edges that are incident to nodes with upper bound at zero */
-    ijw_2_svecvec_symm(L_num_ijw, L_ijw_vec, L_num_node, AAmat);
-    for (i=0; i<L_num_node; i++)
-    {
-        if (in_deg_bdd_vec[2*i + 1]<=0)
-        {
-            AAmat[i]->clear();
-            for (j=0; j<L_num_node; j++) 
-            {
-                AAmat[j]->erase(i);
-            }
-        }
-    }
-    /* extract updated upper triangle ijw */
-    svecvec_2_ijw(L_num_node, AAmat, L_num_ijw, L_ijw_vec);
-    ijw_upper_tri(L_num_ijw, L_ijw_vec, 0);
-    
-    /* compute degree (self-loops=2)*/
-    for (k=0; k<L_num_ijw; k++) {
-        i = int(L_ijw_vec[3*k+0]);
-        j = int(L_ijw_vec[3*k+1]);
-        deg_vec[i] += 1;
-        deg_vec[j] += 1;
-    }
-    /* ensure validity of bounds */
-    for (i=0; i<L_num_node; i++) 
-    {
-        L_in_deg_bdd_vec[2*i + 0] = max(0.0, min(L_in_deg_bdd_vec[2*i + 0], deg_vec[i]));
-        L_in_deg_bdd_vec[2*i + 1] = max(L_in_deg_bdd_vec[2*i + 0], min(L_in_deg_bdd_vec[2*i + 1], deg_vec[i]));
-    }
-
-
-    /* scale weigths for (integral) resolution with goblin
-     * 
-     * 1) this is efficient, because we are operating on the sparse ijw_vec 
-     * representation
-     *
-     * 2) we only perform multiplicatioin by GOBLIN_COST_SCALE, and explicitly 
-     * avoid translations of the weights, because translations can affect the
-     * optimality of the solution
-     *
-     * 3) selecting an appropriate scale factor GOBLIN_COST_SCALE is tricky;
-     * it should be large enough so that all distinct weights are mapped to 
-     * distinct integer values, but small enough so that the maximum weight 
-     * does not exceed the float capacity
-     *
-     * One solution is to use the maximum possible scaling as determined 
-     * by the precision of the weights.
-     *
-	 * ... 2^31 - 1 = 2147483647
-	 * ... 2^30 - 1 = 1073741823
-     *
-     * DEPRECATED: scale_weight(L_num_ijw, L_ijw_vec, 1.0, GOBLIN_COST_SCALE);
-     * OLD: scale_weight2(L_num_ijw, L_ijw_vec, GOBLIN_COST_SCALE);
-	 * OLD: scale_weight3(L_num_ijw, L_ijw_vec, 1073741823);
+    /* scale weigths for (integral) resolution with goblin */
+    /*
+     * scaling the weights to range [0, GOBLIN_COST_SCALE] and not 
+     * [1, GOBLIN_COST_SCALE]
      * */
-	scale_weight3(L_num_ijw, L_ijw_vec, INT_MAX);
+    /* scale_weight(L_num_ijw, L_ijw_vec, 1.0, GOBLIN_COST_SCALE); */
+    /*
+     * by shifting the relative costs, goblin was occasionally return
+     * suboptimal solutions, especially when the weights were near zero
+     * */
+    scale_weight2(L_num_ijw, L_ijw_vec, GOBLIN_COST_SCALE);
 
-
-    /* */
     success = BmatchSolver::solve_bmatching_problem(L_num_node, L_deg_bdd_vec, L_num_ijw, L_ijw_vec, num_bmatch_edge, bmatch_edge_vec, bmatch_wgt, verbose);
-
 
     /* create WWmat */
     ijw_2_svecvec_symm(in_num_ijw, in_ijw_vec, in_num_node, WWmat);
@@ -388,8 +295,8 @@ solve_bmatching_problem(const int & in_num_node, const DoubleVec & in_deg_bdd_ve
     }
 
     /* local cleanup */
-    delete_svecvec(AAmat);
     delete_svecvec(WWmat);
+
 
     return success;
 }
@@ -409,16 +316,7 @@ ComplementaryGoblinExactBmatch::
 }
 
 
-/* solve_bmatching_problem
- *
- *  MAX WGT formulation
- *
- * - removes edges that are incident to nodes with upper bound at zero
- * - ensures validity of degree bounds, first checking
- *   1) 0 <= UB <= ith_degree(graph), and then
- *   2) 0 <= LB <= UB
- *   (i.e. if LB>UB, then LB is set to UB, which is different from mincost)
- * */
+/* solve_bmatching_problem */
 int ComplementaryGoblinExactBmatch::
 solve_bmatching_problem(const int & in_num_node, const DoubleVec & in_deg_bdd_vec, const int & in_num_ijw, const DoubleVec & in_ijw_vec, int & num_bmatch_edge, DoubleVec & bmatch_edge_vec, double & bmatch_wgt, const int & verbose)
 {
@@ -432,12 +330,10 @@ solve_bmatching_problem(const int & in_num_node, const DoubleVec & in_deg_bdd_ve
     int     L_num_ijw = in_num_ijw;
     DoubleVec L_ijw_vec = in_ijw_vec;
     DoubleVec L_deg_bdd_vec = in_deg_bdd_vec;
-    /* NEW */
-    DoubleVec L_in_deg_bdd_vec = in_deg_bdd_vec;
-    /* NEW */
 
     /* degrees */
     DoubleVec deg_vec(L_num_node, 0);     /* of input graph */
+    DoubleVec bval_vec(L_num_node, 0);    /* upper bounds */
 
     /* adjacency and weights */
     SparseVecVec AAmat;
@@ -445,11 +341,16 @@ solve_bmatching_problem(const int & in_num_node, const DoubleVec & in_deg_bdd_ve
     SparseVecVec WWmat;
     SparseVecIterator sp;
 
+    /* working copy of upper degree bounds */
+    for (i=0; i<L_num_node; i++) {
+        bval_vec[i] = L_deg_bdd_vec[2*i + 1];
+    }
     /* remove edges that are incident to nodes with upper bound at zero */
     ijw_2_svecvec_symm(L_num_ijw, L_ijw_vec, L_num_node, AAmat);
+
     for (i=0; i<L_num_node; i++)
     {
-        if (L_in_deg_bdd_vec[2*i + 1]<=0)
+        if (bval_vec[i]==0)
         {
             AAmat[i]->clear();
             for (j=0; j<L_num_node; j++) 
@@ -475,14 +376,13 @@ solve_bmatching_problem(const int & in_num_node, const DoubleVec & in_deg_bdd_ve
     /* ensure validity of bounds */
     for (i=0; i<L_num_node; i++) 
     {
-        L_in_deg_bdd_vec[2*i + 1] = max(0.0, min(L_in_deg_bdd_vec[2*i + 1], deg_vec[i]));
-        L_in_deg_bdd_vec[2*i + 0] = max(0.0, min(L_in_deg_bdd_vec[2*i + 0], L_in_deg_bdd_vec[2*i + 1]));
+        bval_vec[i] = max(0.0, min(bval_vec[i], deg_vec[i]));
     }
     /* get complementary degree bounds */
     for (i=0; i<L_num_node; i++)
     {
-        L_deg_bdd_vec[2*i + 0] = deg_vec[i] - L_in_deg_bdd_vec[2*i + 1];
-        L_deg_bdd_vec[2*i + 1] = deg_vec[i] - L_in_deg_bdd_vec[2*i + 0];
+        L_deg_bdd_vec[2*i + 0] = deg_vec[i] - bval_vec[i];
+        L_deg_bdd_vec[2*i + 1] = deg_vec[i];
     }
 
     /* debug */
@@ -492,9 +392,9 @@ solve_bmatching_problem(const int & in_num_node, const DoubleVec & in_deg_bdd_ve
         write_mn_matrix(cerr, L_num_ijw, 3, L_ijw_vec, 4);
         cerr << "deg_vec:" << endl;
         write_mn_matrix(cerr, L_num_node, 1, deg_vec, 4);
-        cerr << "maxwgt_deg_bdd_vec:" << endl;
-        write_mn_matrix(cerr, L_num_node, 2, L_in_deg_bdd_vec, 4);
-        cerr << "mincost_deg_bdd_vec:" << endl;
+        cerr << "bval_vec:" << endl;
+        write_mn_matrix(cerr, L_num_node, 1, bval_vec, 4);
+        cerr << "deg_bdd_vec:" << endl;
         write_mn_matrix(cerr, L_num_node, 2, L_deg_bdd_vec, 4);
     }
 

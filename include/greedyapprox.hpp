@@ -1,6 +1,6 @@
 /*
  * B-matching toolbox
- * Stu Andrews
+ * Stu Andrews (sja2106@columbia.edu)
  * January 2008
  * */
 #ifndef _GREEDYAPPROX_SOLVER_H_

@@ -1,6 +1,6 @@
 /*
  * B-matching toolbox
- * Stu Andrews
+ * Stu Andrews (sja2106@columbia.edu)
  * January 2008
  * */
 #ifndef _GOBLINEXACT_SOLVER_H_
@@ -33,10 +33,6 @@ class GoblinExactBmatch : public BmatchSolver
 
         /* scale_weight2 */
         virtual void scale_weight2(const int & num_ijw, DoubleVec & ijw_vec, const double & ff);
-
-
-        /* scale_weight3 */
-        virtual void scale_weight3(const int & num_ijw, DoubleVec & ijw_vec, const double & ff);
 
 
 

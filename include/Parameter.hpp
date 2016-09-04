@@ -59,8 +59,7 @@ public:
     string  weights;
     string  degrees;
     string  output;
-    int     const_u;
-    int     const_l;
+    int     const_b;
     int     sparse;
     int     method;
     int     verbose;
@@ -76,8 +75,7 @@ init_0()
     weights     = string("");
     degrees     = string("");
     output      = string("");
-    const_u     = 0;
-    const_l     = 0;
+    const_b     = 0;
     sparse      = 0;
     method      = 0;
     verbose     = 0;
@@ -139,17 +137,11 @@ init(int argc, char* argv[])
         if (string("-o")==argv[i]) {
             output = string(argv[++i]); continue;
         }
-        if (string("-const_u")==argv[i]) {
-            const_u = atoi(argv[++i]); continue;
+        if (string("-const_b")==argv[i]) {
+            const_b = atoi(argv[++i]); continue;
         }
-        if (string("-u")==argv[i]) {
-            const_u = atoi(argv[++i]); continue;
-        }
-        if (string("-const_l")==argv[i]) {
-            const_l = atoi(argv[++i]); continue;
-        }
-        if (string("-l")==argv[i]) {
-            const_l = atoi(argv[++i]); continue;
+        if (string("-b")==argv[i]) {
+            const_b = atoi(argv[++i]); continue;
         }
         if (string("-sparse")==argv[i]) {
             sparse = atoi(argv[++i]); continue;
@@ -186,23 +178,23 @@ print_help()
      */
     cerr << "Usage> bmatch [-arg1 value] [-arg2 value] ..." << endl << endl;
     cerr << "Solves:" << endl;
-    cerr << setw(W) << " " << "optimize_Yij sum_ij W_ij Y_ij  s.t. l_i <= sum_j Y_ij <= u_i, 1 <= i <= n" << endl;
+    cerr << setw(W) << " " << "max_Yij  sum_ij W_ij Y_ij    s.t.   sum_j Y_ij <= b_i,  1 <= i <= n" << endl;
     cerr << setw(W) << " " << "and Wij and Yij are symmetric" << endl << endl;
     cerr << "Arguments [with default values]:" << endl << endl;
     /* */
     print();
 
     /* */
-    cerr << endl << "Method: " << endl << endl;
+    cerr << endl << "Algorithm: " << endl << endl;
     cerr << setw(W) << "1. " << COMPLEMENTARYGOBLINEXACTBMATCH << endl;
-    cerr << setw(W) << "2. " << GOBLINEXACTBMATCH << endl;
+    cerr << setw(W) << "2. " << NEGATEDWEIGHTSGOBLINEXACTBMATCH << endl;
     cerr << setw(W) << "3. " << GREEDYAPPROXBMATCH << endl;
-    cerr << setw(W) << "4. " << RECURSIVEGREEDYAPPROXBMATCH << endl;
-    cerr << setw(W) << "5. " << BELIEFPROPBMATCH << endl;
+    cerr << setw(W) << "5. " << RECURSIVEGREEDYAPPROXBMATCH << endl;
+    cerr << setw(W) << "7. " << BELIEFPROPBMATCH << endl;
 
     cerr << "           " << endl;
     cerr << " Example 4:" << endl;
-    cerr << "bmatch -weights ""data/ijw_in_5.txt"" -degrees ""data/degree_in_5.txt"" -output ""data/ijw_out_5.txt"" -sparse 1 -verbose 1 -method 4" << endl;
+    cerr << "bmatch -weights ""data/ijw_in_5.txt"" -degrees ""data/degree_in_5.txt"" -output ""data/ijw_out_5.txt"" -sparse 1 -verbose 1 -method 5" << endl;
     cerr << "bmatch -weights ""data/ijw_in_5.txt"" -degrees ""data/degree_in_5.txt"" -output ""data/ijw_out_5.txt"" -sparse 1 -verbose 1 -method 1" << endl;
 
     cerr << "           " << endl;
@@ -211,11 +203,11 @@ print_help()
 
     cerr << "           " << endl;
     cerr << " Example 2:" << endl;
-    cerr << "bmatch -w ""data/matrix_in_2.txt"" -u 2 -v 1 -m 3" << endl;
+    cerr << "bmatch -w ""data/matrix_in_2.txt"" -b 2 -v 1 -m 3" << endl;
 
     cerr << "           " << endl;
     cerr << " Example 1:" << endl;
-    cerr << "bmatch -w ""data/matrix_in_1.txt"" -u 2 -v 1" << endl;
+    cerr << "bmatch -w ""data/matrix_in_1.txt"" -b 2 -v 1" << endl;
 
     cerr << "           " << endl;
     cerr << " Example 0:" << endl;
@@ -242,22 +234,16 @@ print_help()
     cerr << setw(W) << " ";
     cerr << "The output weight is calculated as sum_{i<=j} Wij Yij, except when" << endl;
     cerr << setw(W) << " ";
-    cerr << "belief propagation is used, whose output is not necessarily" << endl;
+    cerr << "beleif propagation is used, whose output is not necessarily" << endl;
     cerr << setw(W) << " ";
     cerr << "symmetric.  For BP, the output weight is 0.5 * sum_{i,j} Wij Yij." << endl << endl;
 
-    cerr << setw(W) << " ";
-    cerr << "The lower bounds are ignored by methods 3-5. Bipartite relaxation" << endl;
-    cerr << setw(W) << " ";
-    cerr << "assumes that the degree upper bounds can be met with equality." << endl << endl;
-    /*
     cerr << setw(W) << " ";
     cerr << "The reduction of method 2 may not always yield the optimal matching," << endl;
     cerr << setw(W) << " ";
     cerr << "and sometimes may not satisfy the upper bounds.  This method was used" << endl;
     cerr << setw(W) << " ";
     cerr << "before we discovered the more accurate reduction of method 1." << endl << endl;
-    */
 
     exit(1);
 }
@@ -278,8 +264,7 @@ print()
     cerr << setw(W)  << "-w -weights ["  << left << setw(Warg) << weights << right << "] input file, NULL => std. input" << endl;
     cerr << setw(W)  << "-d -degrees ["  << left << setw(Warg) << degrees << right << "] input file, NULL => std. input" << endl;
     cerr << setw(W)  << "-o -output  ["  << left << setw(Warg) << output  << right << "] output file, NULL => std. output" << endl;
-    cerr << setw(W)  << "-l -const_l ["  << left << setw(Warg) << const_l << right << "] positive integer, negative => std. input" << endl;
-    cerr << setw(W)  << "-u -const_u ["  << left << setw(Warg) << const_u << right << "] positive integer, negative => std. input" << endl;
+    cerr << setw(W)  << "-c -const_b ["  << left << setw(Warg) << const_b << right << "] positive integer, negative => std. input" << endl;
     cerr << setw(W)  << "-s -sparse  ["  << left << setw(Warg) << sparse  << right << "] 0 => matrix, 1 => IJW input format" << endl;
     cerr << setw(W)  << "-m -method  ["  << left << setw(Warg) << method  << right << "] selects algorithm" << endl;
     cerr << setw(W)  << "-v -verbose ["  << left << setw(Warg) << verbose << right << "] positive integer" << endl;

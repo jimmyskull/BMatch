@@ -2,17 +2,17 @@
 #ifndef METHOD_NAMES
 #define METHOD_NAMES
 
-#define GOBLINEXACTBMATCH "exact mincost solution using goblin"
+#define GOBLINEXACTBMATCH "exact solution using goblin mincost solver"
 
-#define COMPLEMENTARYGOBLINEXACTBMATCH "exact maxwgt solution using goblin via subgraph complement"
+#define COMPLEMENTARYGOBLINEXACTBMATCH "exact solution using goblin mincost solver via subgraph complement"
 
-#define NEGATEDWEIGHTSGOBLINEXACTBMATCH "approximate maxwgt solution using goblin via negated weights"
+#define NEGATEDWEIGHTSGOBLINEXACTBMATCH "approximate solution using goblin mincost solver via negated weights"
 
-#define GREEDYAPPROXBMATCH "greedy 1/2 approximation to maxwgt solution"
+#define GREEDYAPPROXBMATCH "greedy 1/2 approximation"
 
-#define RECURSIVEGREEDYAPPROXBMATCH "greedy 1/2 approximation to maxwgt solution with recursion"
+#define RECURSIVEGREEDYAPPROXBMATCH "greedy 1/2 approximation with recursion"
 
-#define BELIEFPROPBMATCH "bipartite relaxation to maxwgt solution using belief propagation"
+#define BELIEFPROPBMATCH "bipartite relaxation using belief propagation"
 
 #endif
 

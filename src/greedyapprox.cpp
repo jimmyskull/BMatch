@@ -1,6 +1,6 @@
 /*
  * B-matching toolbox
- * Stu Andrews
+ * Stu Andrews (sja2106@columbia.edu)
  * January 2008
  * */
 #include <cmath>

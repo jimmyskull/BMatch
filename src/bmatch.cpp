@@ -1,6 +1,6 @@
 /*
  * B-matching toolbox
- * Stu Andrews
+ * Stu Andrews (sja2106@columbia.edu)
  *
  * */
 #ifdef _LEAKTEST_
@@ -23,15 +23,15 @@ using namespace std;
 
 
 /* initialize N x 2 array with rows [ 0 , b ] */
-void init_const_degrees(const int & num_node, DoubleVec & deg_bdd_vec, const double & lower_b, const double & upper_b)
+void init_const_degrees(const int & num_node, DoubleVec & deg_bdd_vec, const double & b)
 {
     register int i;
     deg_bdd_vec.clear();
     deg_bdd_vec.reserve(2*num_node);
     for (i=0; i<num_node; i++)
     {
-        deg_bdd_vec.push_back(lower_b);
-        deg_bdd_vec.push_back(upper_b);
+        deg_bdd_vec.push_back(0.0);
+        deg_bdd_vec.push_back(b);
     }
 }
 /* end of init_const_degrees */
@@ -44,13 +44,13 @@ void read_degrees(istream & in, int & num_node, DoubleVec & deg_bdd_vec)
     DoubleVec TTvec;
     int N;
     int M;
-    double const_u;
+    double const_b;
     read_mn_matrix(in, M, N, deg_bdd_vec);
     /* convert scalar input into Mx2 format using repmat([0,UB],num_node,1) */
     if ((M==1)&&(N==1))
     {
-        const_u = deg_bdd_vec[0];
-        init_const_degrees(num_node,deg_bdd_vec,0.0,const_u);
+        const_b = deg_bdd_vec[0];
+        init_const_degrees(num_node,deg_bdd_vec,const_b);
         return;
     }
     /* convert Mx1 inputs into Mx2 format, using [zeros(num_node,1),UB_vec] */
@@ -160,8 +160,7 @@ int main(int argc, char *argv[])
         " -weights      NULL "
         " -degrees      NULL "
         " -output       NULL "
-        " -l            -1   "
-        " -u            -1   "
+        " -b            -1   "
         " -s            0    "
         " -method       1    "
         " -verbose      0    "
@@ -229,18 +228,10 @@ int main(int argc, char *argv[])
 
 
     /* degrees */ 
-    if (PP.const_u>=0) 
+    if (PP.const_b>=0) 
     {
-        if (PP.const_l>=0)
-        {
-            /* initialize num_node array of constant = [l, u] */ 
-            init_const_degrees(num_node,deg_bdd_vec,PP.const_l,PP.const_u);
-        }
-        else
-        {
-            /* initialize num_node array of constant = [0.0, u] */ 
-            init_const_degrees(num_node,deg_bdd_vec,0.0,PP.const_u);
-        }
+        /* initialize num_node array of constant = b */ 
+        init_const_degrees(num_node,deg_bdd_vec,PP.const_b);
     }
     else
     {
@@ -268,7 +259,7 @@ int main(int argc, char *argv[])
         }
     }
     /* */
-    if ((!is_weights_file) || ((!is_degrees_file)&&(PP.const_u<0)) )
+    if ((!is_weights_file) || ((!is_degrees_file)&&(PP.const_b<0)) )
     {
         cerr << "bmatch> solving problem ..." << endl;
     }
@@ -298,15 +289,15 @@ int main(int argc, char *argv[])
             ALG = new ComplementaryGoblinExactBmatch();
             break;
         case 2: 
-            ALG = new GoblinExactBmatch();
+            ALG = new NegatedWeightsGoblinExactBmatch();
             break;
         case 3: 
             ALG = new GreedyApproxBmatch();
             break;
-        case 4: 
+        case 5: 
             ALG = new RecursiveGreedyApproxBmatch();
             break;
-        case 5: 
+        case 7: 
             ALG = new BeliefPropBmatch();
             /* use full matrix */
             ijw_add_upper_tri_transpose(num_ijw, ijw_vec, 1);
@@ -323,7 +314,7 @@ int main(int argc, char *argv[])
     delete ALG;
     /* */
     /* */
-    if (PP.method==5) /* special case */
+    if (PP.method==7) /* special case */
     {
         bmatch_wgt = 0.5*bmatch_wgt;
     }
@@ -353,13 +344,13 @@ int main(int argc, char *argv[])
     }
     else
     {
-        if (PP.method!=5) /* special case */
+        if (PP.method!=7) /* special case */
         {
             ijw_add_upper_tri_transpose(num_bmatch_edge, bmatch_edge_vec, 1);
         }
         /* write full symmetrix matrix in ijw format */
         ijw_write_matrix(*out_strm_ptr,num_node,num_bmatch_edge,bmatch_edge_vec,3);
-        if (PP.method!=5) /* special case */
+        if (PP.method!=7) /* special case */
         {
             ijw_upper_tri(num_bmatch_edge, bmatch_edge_vec, 0);
         }

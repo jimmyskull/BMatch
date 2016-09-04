@@ -1,6 +1,6 @@
 /*
  * B-matching toolbox
- * Stu Andrews
+ * Stu Andrews (sja2106@columbia.edu)
  *
  * */
 #ifdef _LEAKTEST_
