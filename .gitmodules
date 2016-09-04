@@ -1,0 +1,3 @@
+[submodule "goblin.2.8b18"]
+	path = goblin.2.8b18
+	url = git@github.com:jimmyskull/goblin.2.8b18.git
